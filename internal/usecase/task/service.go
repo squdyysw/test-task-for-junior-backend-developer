@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"fmt"
+	"slices",
 	"strings"
 	"time"
 
@@ -31,8 +32,12 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*taskdomain.Ta
 		Title:       normalized.Title,
 		Description: normalized.Description,
 		Status:      normalized.Status,
+		Recurrence   normalized.Recurrence,
 	}
 	now := s.now()
+	if model.Recurrence.Type == taskdomain.RecurrenceDaily && model.Recurrence.StartDate.IsZero() {
+  		model.Recurrence.StartDate = toDate(now)
+ 	}
 	model.CreatedAt = now
 	model.UpdatedAt = now
 
@@ -67,6 +72,7 @@ func (s *Service) Update(ctx context.Context, id int64, input UpdateInput) (*tas
 		Title:       normalized.Title,
 		Description: normalized.Description,
 		Status:      normalized.Status,
+		Recurrence   normalized.Recurrence,
 		UpdatedAt:   s.now(),
 	}
 
@@ -106,6 +112,12 @@ func validateCreateInput(input CreateInput) (CreateInput, error) {
 		return CreateInput{}, fmt.Errorf("%w: invalid status", ErrInvalidInput)
 	}
 
+	recurrence, err := validateRecurrence(input.Recurrence)
+ 	if err != nil {
+  		return CreateInput{}, err
+ 	}
+ 	input.Recurrence = recurrence
+
 	return input, nil
 }
 
@@ -121,5 +133,86 @@ func validateUpdateInput(input UpdateInput) (UpdateInput, error) {
 		return UpdateInput{}, fmt.Errorf("%w: invalid status", ErrInvalidInput)
 	}
 
-	return input, nil
+	recurrence, err := validateRecurrence(input.Recurrence)
+ 	if err != nil {
+  		return UpdateInput{}, err
+ 	}
+ 	input.Recurrence = recurrence
+
+ 	return input, nil
+}
+
+func validateRecurrence(input taskdomain.Recurrence) (taskdomain.Recurrence, error) {
+ 	if input.Type == "" {
+  	input.Type = taskdomain.RecurrenceNone
+ 	}
+
+ 	if !input.Type.Valid() {
+  		return taskdomain.Recurrence{}, fmt.Errorf("%w: invalid recurrence type", ErrInvalidInput)
+ 	}
+
+ 	input.Dates = normalizeDates(input.Dates)
+
+ 	switch input.Type {
+ 	case taskdomain.RecurrenceNone:
+ 		return taskdomain.Recurrence{Type: taskdomain.RecurrenceNone}, nil
+ 	case taskdomain.RecurrenceDaily:
+  		if input.Interval <= 0 {
+   			return taskdomain.Recurrence{}, fmt.Errorf("%w: interval must be positive", ErrInvalidInput)
+  		}
+  		if !input.StartDate.IsZero() {
+   			input.StartDate = toDate(input.StartDate)
+  		}
+  		input.DayOfMonth = 0
+  		input.Dates = nil
+ 	case taskdomain.RecurrenceMonthly:
+  		if input.DayOfMonth < 1 || input.DayOfMonth > 30 {
+  			return taskdomain.Recurrence{}, fmt.Errorf("%w: day_of_month must be from 1 to 30", ErrInvalidInput)
+  		}
+  		input.Interval = 0
+  		input.Dates = nil
+  		input.StartDate = time.Time{}
+ 	case taskdomain.RecurrenceSpecificDates:
+  		if len(input.Dates) == 0 {
+   			return taskdomain.Recurrence{}, fmt.Errorf("%w: at least one date is required", ErrInvalidInput)
+  		}
+  		input.Interval = 0
+  		input.DayOfMonth = 0
+  		input.StartDate = time.Time{}
+ 	case taskdomain.RecurrenceEvenDays, taskdomain.RecurrenceOddDays:
+  		input.Interval = 0
+  		input.DayOfMonth = 0
+  		input.Dates = nil
+  		input.StartDate = time.Time{}
+	}
+
+ 	return input, nil
+}
+
+func normalizeDates(dates []time.Time) []time.Time {
+ 	if len(dates) == 0 {
+  		return nil
+ 	}
+
+ 	out := make([]time.Time, 0, len(dates))
+ 	seen := make(map[string]struct{}, len(dates))
+ 	for _, d := range dates {
+  		nd := toDate(d)
+  		key := nd.Format(time.DateOnly)
+  		if _, ok := seen[key]; ok {
+   			continue
+  		}
+  		seen[key] = struct{}{}
+  		out = append(out, nd)
+ 	}
+
+ 	slices.SortFunc(out, func(a, b time.Time) int {
+  		return a.Compare(b)
+ 	})
+ 	return out
+}
+
+func toDate(t time.Time) time.Time {
+ 	t = t.UTC()
+ 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }

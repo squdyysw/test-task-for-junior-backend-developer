@@ -169,6 +169,10 @@
             "type": "string",
             "enum": ["new", "in_progress", "done"],
             "example": "new"
+          },
+          "recurrence": {
+            "$ref": "#/components/schemas/Recurrnce"
+          }
           }
         }
       },
@@ -188,6 +192,9 @@
             "type": "string",
             "enum": ["new", "in_progress", "done"],
             "example": "in_progress"
+          },
+          "recurrence": {
+            "$ref": "#/components/schemas/Recurrnce"
           }
         }
       },
@@ -204,6 +211,9 @@
             "type": "string",
             "enum": ["new", "in_progress", "done"],
             "example": "new"
+            },
+          "recurrence": {
+            "$ref": "#/components/schemas/Recurrnce"
           },
           "created_at": {
             "type": "string",
@@ -214,6 +224,40 @@
             "type": "string",
             "format": "date-time",
             "example": "2026-03-24T00:00:00Z"
+          }
+        }
+      },
+      "Recurrence": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["none", "daily", "monthly", "specific_dates", "even_days", "odd_days"],
+            "example": "daily"
+          },
+          "interval": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 2
+          },
+          "day_of_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "example": 15
+          },
+          "dates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": ["2026-04-13", "2026-04-20"]
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-04-13"
           }
         }
       },

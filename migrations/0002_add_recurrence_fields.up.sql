@@ -1,0 +1,3 @@
+ALTER TABLE tasks
+ADD COLUMN IF NOT EXISTS recurrence_type TEXT NOT NULL DEFAULT 'none',
+ADD COLUMN IF NOT EXISTS recurrence_config JSONB NOT NULL DEFAULT '{}'::jsonb;
