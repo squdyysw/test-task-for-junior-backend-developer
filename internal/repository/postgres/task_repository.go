@@ -21,27 +21,27 @@ func New(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (r *Repository) Create(ctx context.Context, task *taskdomain.Task) (*taskdomain.Task, error) {
+func (r *Repository) Create(ctx context.Context, model *taskdomain.Task) (*taskdomain.Task, error) {
 	const query = `
-		INSERT INTO tasks (title, description, status, recurrence_type, recurrence_config, created_at updated_at)
+		INSERT INTO tasks (title, description, status, recurrence_type, recurrence_config, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, title, description, status, recurrence_type, recurrence_config, created_at, updated_at
 	`
 
-	recurrenceConfig, err := marshalRecurrenceConfig(task.Recurrence)
+	recurrence_config, err := marshalRecurrenceConfig(model.Recurrence)
 	if err != nil {
 		return nil, err
 	}
 
 	row := r.pool.QueryRow(ctx,
 		query,
-		task.Title,
-		task.Description,
-		task.Status,
-		task.recurrence_type,
-		task.recurrence_config,
-		task.CreatedAt,
-		task.UpdatedAt
+		model.Title,
+		model.Description,
+		model.Status,
+		string(model.Recurrence.Type),
+		recurrence_config,
+		model.CreatedAt,
+		model.UpdatedAt,
 	)
 	created, err := scanTask(row)
 	if err != nil {
@@ -71,7 +71,7 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*taskdomain.Task, e
 	return found, nil
 }
 
-func (r *Repository) Update(ctx context.Context, task *taskdomain.Task) (*taskdomain.Task, error) {
+func (r *Repository) Update(ctx context.Context, model *taskdomain.Task) (*taskdomain.Task, error) {
 	const query = `
 		UPDATE tasks
 		SET title = $1,
@@ -84,21 +84,21 @@ func (r *Repository) Update(ctx context.Context, task *taskdomain.Task) (*taskdo
 		RETURNING id, title, description, status, recurrence_type, recurrence_config, created_at, updated_at
 	`
 
-	recurrenceConfig, err := marshalRecurrenceConfig(task.Recurrence)
+	recurrence_config, err := marshalRecurrenceConfig(model.Recurrence)
 	if err != nil {
 		return nil, err
 	}
 
 	row := r.pool.QueryRow(ctx,
 		query,
-		task.Title,
-		task.Description,
-		task.Status,
-		task.recurrence_type,
-		task.recurrence_config,
-		task.CreatedAt,
-		task.UpdatedAt,
-		task.ID
+		model.Title,
+		model.Description,
+		model.Status,
+		string(model.Recurrence.Type),
+		recurrence_config,
+		model.CreatedAt,
+		model.UpdatedAt,
+		model.ID,
 	)
 	updated, err := scanTask(row)
 	if err != nil {
