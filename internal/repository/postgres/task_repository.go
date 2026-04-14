@@ -23,7 +23,7 @@ func New(pool *pgxpool.Pool) *Repository {
 
 func (r *Repository) Create(ctx context.Context, task *taskdomain.Task) (*taskdomain.Task, error) {
 	const query = `
-		INSERT INTO tasks (title, description, status, recurrence_type, recurrence_config, updated_at)
+		INSERT INTO tasks (title, description, status, recurrence_type, recurrence_config, created_at updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, title, description, status, recurrence_type, recurrence_config, created_at, updated_at
 	`
@@ -31,9 +31,18 @@ func (r *Repository) Create(ctx context.Context, task *taskdomain.Task) (*taskdo
 	recurrenceConfig, err := marshalRecurrenceConfig(task.Recurrence)
 	if err != nil {
 		return nil, err
-	}	
+	}
 
-	row := r.pool.QueryRow(ctx, query, task.Title, task.Description, task.Status, task.recurrence_type, task.recurrence_config, task.CreatedAt, task.UpdatedAt)
+	row := r.pool.QueryRow(ctx,
+		query,
+		task.Title,
+		task.Description,
+		task.Status,
+		task.recurrence_type,
+		task.recurrence_config,
+		task.CreatedAt,
+		task.UpdatedAt
+	)
 	created, err := scanTask(row)
 	if err != nil {
 		return nil, err
@@ -78,9 +87,19 @@ func (r *Repository) Update(ctx context.Context, task *taskdomain.Task) (*taskdo
 	recurrenceConfig, err := marshalRecurrenceConfig(task.Recurrence)
 	if err != nil {
 		return nil, err
-	}	
+	}
 
-	row := r.pool.QueryRow(ctx, query, task.Title, task.Description, task.Status, task.recurrence_type, task.recurrence_config, task.CreatedAt, task.UpdatedAt, task.ID)
+	row := r.pool.QueryRow(ctx,
+		query,
+		task.Title,
+		task.Description,
+		task.Status,
+		task.recurrence_type,
+		task.recurrence_config,
+		task.CreatedAt,
+		task.UpdatedAt,
+		task.ID
+	)
 	updated, err := scanTask(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -144,10 +163,10 @@ type taskScanner interface {
 
 func scanTask(scanner taskScanner) (*taskdomain.Task, error) {
 	var (
-		task   taskdomain.Task
-		status string
+		task           taskdomain.Task
+		status 		   string
 		recurrenceType string
-		recurrenceRaw []byte
+		recurrenceRaw  []byte
 	)
 
 	if err := scanner.Scan(
@@ -175,10 +194,10 @@ func scanTask(scanner taskScanner) (*taskdomain.Task, error) {
 }
 
 type recurrenceConfig struct {
- 	Interval   int `json:"interval,omitempty"`
- 	DayOfMonth int `json:"day_of_month, omitempty"`
-  	Dates []timeAlias `json:"dates, omitempty"`
-  	StartDate  *timeAlias `json:"start_date, omitempty"`
+ 	Interval   int         `json:"interval,omitempty"`
+ 	DayOfMonth int         `json:"day_of_month, omitempty"`
+  	Dates      []timeAlias `json:"dates, omitempty"`
+  	StartDate  *timeAlias  `json:"start_date, omitempty"`
 }
 
 type timeAlias string

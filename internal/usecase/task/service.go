@@ -3,7 +3,7 @@ package task
 import (
 	"context"
 	"fmt"
-	"slices",
+	"slices"
 	"strings"
 	"time"
 
@@ -32,7 +32,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*taskdomain.Ta
 		Title:       normalized.Title,
 		Description: normalized.Description,
 		Status:      normalized.Status,
-		Recurrence   normalized.Recurrence,
+		Recurrence:   normalized.Recurrence,
 	}
 	now := s.now()
 	if model.Recurrence.Type == taskdomain.RecurrenceDaily && model.Recurrence.StartDate.IsZero() {
@@ -72,7 +72,7 @@ func (s *Service) Update(ctx context.Context, id int64, input UpdateInput) (*tas
 		Title:       normalized.Title,
 		Description: normalized.Description,
 		Status:      normalized.Status,
-		Recurrence   normalized.Recurrence,
+		Recurrence:   normalized.Recurrence,
 		UpdatedAt:   s.now(),
 	}
 
